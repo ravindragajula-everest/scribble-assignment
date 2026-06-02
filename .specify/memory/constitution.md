@@ -1,50 +1,175 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+SYNC IMPACT REPORT
+==================
+Version change: [TEMPLATE] → 1.0.0 (initial ratification — all placeholders resolved)
+
+Principles added (new, no prior named principles):
+  I.   Code Quality & TypeScript Discipline
+  II.  Testing Standards (NON-NEGOTIABLE)
+  III. REST API Conventions
+  IV.  Reusability & Minimal Dependencies
+  V.   Accessibility & Modern UI
+
+Sections added:
+  - Hardcoded Constraints (technical out-of-scope boundaries from README)
+  - Development Workflow & Review Gates
+
+Templates status:
+  ✅ .specify/memory/constitution.md — this file (written now)
+  ✅ .specify/templates/plan-template.md — Constitution Check section already present;
+     gates now map to the five principles above (no rewrite needed, content advisory)
+  ✅ .specify/templates/spec-template.md — User Scenarios and Requirements sections
+     align with principle II (testing) and III (REST); no structural change needed
+  ✅ .specify/templates/tasks-template.md — task phases for unit/integration/e2e tests
+     align with principle II; [P] parallelism aligns with principle IV; no rewrite needed
+
+Deferred TODOs:
+  - None. All fields resolved from codebase context and user input.
+-->
+
+# Scribble Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Code Quality & TypeScript Discipline
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+Every file in `backend/src/` and `frontend/src/` MUST be fully typed TypeScript.
+`any` is forbidden; use `unknown` when a type is genuinely dynamic and narrow it
+explicitly. Functions MUST be pure where possible; side effects MUST be explicit and
+isolated to service layers. Dead code, commented-out blocks, and unused imports MUST
+NOT be committed. All shared types MUST be co-located with the module that owns them —
+no duplicated interface definitions across backend and frontend. ESLint (with
+`@typescript-eslint`) is the enforced linter; builds MUST pass with zero lint errors.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rationale**: The starter codebase already uses strict TypeScript and Zod throughout;
+this principle locks in that discipline and prevents silent erosion as features are added.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Testing Standards (NON-NEGOTIABLE)
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+Tests MUST be written before implementation (TDD). The Red-Green-Refactor cycle is
+mandatory for every new behavior. All features MUST be covered by three test tiers:
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+- **Unit tests**: Every pure function, validator, and utility — isolated, no network or
+  file I/O. Run with `vitest` (frontend) and `jest` / `tsx --test` (backend).
+- **Integration tests**: Every API endpoint MUST have at least one integration test
+  that boots the real Express app and issues real HTTP calls. No mocking the router or
+  service layer in integration tests.
+- **End-to-end (E2E) tests**: Every business scenario from the README (`Scenario 1–4`)
+  MUST have a Playwright E2E test that drives two browser tabs simultaneously and
+  verifies cross-player sync.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+Tests MUST be committed in the same commit as the code they cover. A PR with new
+behavior and no tests MUST NOT be merged. Mocking is permitted only at external
+boundaries (e.g., `Date.now` for determinism); internal modules MUST NOT be mocked.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Rationale**: The starter has zero test coverage. Strict TDD prevents regression as
+four scenarios are implemented incrementally.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### III. REST API Conventions
 
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+All backend endpoints MUST follow these rules without exception:
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- **HTTP verbs**: GET for reads, POST for creates, PATCH for partial updates,
+  DELETE for removals. No RPC-style routes (e.g., `/rooms/:code/doStart`).
+- **Status codes**: 200 OK, 201 Created (with Location header), 400 Bad Request
+  (validation failure), 404 Not Found, 409 Conflict (duplicate/state collision),
+  500 Internal Server Error (unhandled). No blanket 200 for error responses.
+- **Request validation**: Every endpoint that accepts a body MUST validate it with Zod
+  before touching the service layer. Invalid payloads return 400 with a structured
+  `{ error: string, details?: unknown }` body.
+- **Response shape**: Success responses return the resource or an explicit `{ ok: true }`
+  acknowledgement. Error responses MUST NEVER return stack traces in production.
+- **Path structure**: `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join`,
+  `/api/rooms/:code/guesses` — pluralised nouns, no verbs in paths.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Rationale**: The starter already has three endpoints; this principle ensures new
+endpoints (start, guesses, results, restart) follow a consistent, predictable contract.
+
+### IV. Reusability & Minimal Dependencies
+
+**Reuse before creating**: Before adding a new component, function, or hook, search for
+an existing one. Extract shared logic into a reusable utility or component when the
+same code appears in two or more places. React components MUST accept typed props and
+MUST NOT contain hardcoded data that belongs in a service or store.
+
+**Dependency discipline**: A new `npm` dependency MUST be justified in a PR description
+with a concrete reason and proof that the existing stack cannot cover the need. The
+following categories are prohibited additions: WebSocket libraries, database clients,
+authentication packages, state-management libraries beyond what the starter ships,
+CSS-in-JS libraries, and utility belts that duplicate native browser/Node APIs.
+`node_modules` package count MUST NOT increase without documented justification.
+
+**Duplication rule**: The same logic or JSX structure MUST NOT appear in more than one
+file. Extract to `frontend/src/components/` (UI) or `frontend/src/hooks/` (logic) or
+`backend/src/utils/` (shared backend helpers) on first duplication.
+
+**Rationale**: The starter already ships a lean dependency set. Keeping it lean prevents
+supply-chain risk and keeps build times fast for a lab-scale project.
+
+### V. Accessibility & Modern UI
+
+Every interactive element in the frontend MUST meet WCAG 2.1 Level AA:
+
+- All images MUST have meaningful `alt` attributes (or `alt=""` if decorative).
+- All form inputs MUST have associated `<label>` elements or `aria-label` attributes.
+- All interactive controls MUST be keyboard-reachable and operable via Enter/Space.
+- Color contrast ratio MUST be ≥ 4.5:1 for normal text and ≥ 3:1 for large text.
+- Focus indicators MUST be visible and MUST NOT be removed via `outline: none` without
+  a custom replacement.
+- Error messages MUST be associated with their triggering input via `aria-describedby`.
+
+React patterns: functional components only, no class components. Hooks for local state
+and side effects. No inline styles for layout or theming — use CSS Modules or the
+existing `app.css`. Components MUST render meaningful semantic HTML (`<button>`, `<nav>`,
+`<main>`, `<form>`, `<ul>`) rather than unstyled `<div>` chains.
+
+**Rationale**: Accessibility is a non-negotiable baseline, not a polish step. Semantic
+HTML also improves Playwright selector reliability in E2E tests.
+
+## Hardcoded Constraints
+
+These boundaries are set by the lab assignment and MUST NOT be overridden without
+explicit written approval from the reviewer. They override any principle above:
+
+- **No WebSockets or real-time push**: All multi-player sync MUST use HTTP polling only.
+  Polling cadence MUST be approximately 2 seconds.
+- **No persistent storage**: All data lives in the backend's in-memory store. Restarting
+  the backend clears all state. No SQLite, IndexedDB, localStorage, or cookies.
+- **No authentication**: No sessions, JWT, OAuth, or user accounts.
+- **No new routing or state-management libraries**: React Router v6 and the existing
+  store pattern (`roomStore.ts`) are the ceiling.
+- **Single round only**: No timers, countdowns, drawer rotation across rounds, or
+  multi-round scoring across games. One round per game session.
+- **Starter word list only**: Words are deterministically selected from
+  `["rocket", "pizza", "castle", "guitar", "sunflower"]`. No random word packs.
+
+## Development Workflow & Review Gates
+
+**Constitution Check (mandatory before any PR merge)**:
+
+Every code change MUST pass all five gates before merge:
+
+1. Zero TypeScript errors (`tsc --noEmit`) and zero ESLint errors.
+2. All new behavior covered by unit + integration + E2E tests; tests are committed
+   alongside implementation in the same commit.
+3. All new API endpoints conform to the REST conventions in Principle III; verified
+   by the integration tests hitting the real Express app.
+4. No new `npm` dependency added without PR-description justification.
+5. Interactive elements pass a manual keyboard-navigation check and axe-core (or
+   Playwright accessibility assertions) shows zero violations.
+
+**Amendment procedure**: A principle may be changed only by opening a PR that (a) edits
+this file, (b) bumps `CONSTITUTION_VERSION` per semantic versioning rules, (c) updates
+all affected templates and docs, and (d) receives explicit reviewer sign-off. No verbal
+or chat-only amendments are binding.
+
+**Versioning policy**:
+- MAJOR bump: backward-incompatible removal or redefinition of a principle.
+- MINOR bump: new principle or material section added.
+- PATCH bump: clarification, wording, or typo fix.
+
+**Compliance review**: Every PR description MUST include a "Constitution Check" section
+confirming each gate passes or documenting the deviation with justification. Reviewers
+MUST reject PRs where the Constitution Check section is absent.
+
+**Version**: 1.0.0 | **Ratified**: 2026-06-02 | **Last Amended**: 2026-06-02
