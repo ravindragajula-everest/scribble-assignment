@@ -74,75 +74,77 @@ hooks:
     prompt: Commit outstanding changes before issue sync?
     description: Auto-commit before tasks-to-issues conversion
     condition: null
+  # after_* hooks: mandatory (optional: false) per Constitution v1.1.0
+  # Commits only proceed when compilation and tests pass without failure.
   after_constitution:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     prompt: Commit constitution changes?
-    description: Auto-commit after constitution update
+    description: Auto-commit after constitution update (gated on compile + test)
     condition: null
   after_specify:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     prompt: Commit specification changes?
-    description: Auto-commit after specification
+    description: Auto-commit after specification (gated on compile + test)
     condition: null
   after_clarify:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     prompt: Commit clarification changes?
-    description: Auto-commit after spec clarification
+    description: Auto-commit after spec clarification (gated on compile + test)
     condition: null
   after_plan:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     prompt: Commit plan changes?
-    description: Auto-commit after implementation planning
+    description: Auto-commit after implementation planning (gated on compile + test)
     condition: null
   after_tasks:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     prompt: Commit task changes?
-    description: Auto-commit after task generation
+    description: Auto-commit after task generation (gated on compile + test)
     condition: null
   after_implement:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     prompt: Commit implementation changes?
-    description: Auto-commit after implementation
+    description: Auto-commit after implementation (gated on compile + test)
     condition: null
   after_checklist:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     prompt: Commit checklist changes?
-    description: Auto-commit after checklist generation
+    description: Auto-commit after checklist generation (gated on compile + test)
     condition: null
   after_analyze:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     prompt: Commit analysis results?
-    description: Auto-commit after analysis
+    description: Auto-commit after analysis (gated on compile + test)
     condition: null
   after_taskstoissues:
   - extension: git
     command: speckit.git.commit
     enabled: true
-    optional: true
+    optional: false
     prompt: Commit after syncing issues?
-    description: Auto-commit after tasks-to-issues conversion
+    description: Auto-commit after tasks-to-issues conversion (gated on compile + test)
     condition: null
