@@ -1,7 +1,8 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 (MINOR: new Continuous Commit Discipline rule added)
+Version change: 1.1.0 → 1.1.1 (PATCH: Continuous Commit Discipline clarified —
+  confirmation required before any commit; automatic silent commits removed)
 
 Principles unchanged:
   I.   Code Quality & TypeScript Discipline
@@ -21,7 +22,7 @@ Sections unchanged:
 Templates status:
   ✅ .specify/memory/constitution.md — this file (updated now)
   ✅ .specify/extensions/git/git-config.yml — all after_* auto_commit entries enabled
-  ✅ .specify/extensions.yml — all after_* hooks changed from optional to mandatory
+  ✅ .specify/extensions.yml — all after_* hooks are optional (confirmation required)
   ✅ .specify/templates/plan-template.md — no change required (Constitution Check gates unchanged)
   ✅ .specify/templates/spec-template.md — no change required
   ✅ .specify/templates/tasks-template.md — no change required
@@ -163,9 +164,10 @@ Every code change MUST pass all five gates before merge:
 
 **Continuous Commit Discipline (NON-NEGOTIABLE)**:
 
-Every completed SpecKit command or implementation task MUST be committed automatically
-upon successful completion. A commit MUST NOT be created if either of the following
-conditions fails:
+After every completed SpecKit command or implementation task, a commit MUST be
+proposed to the developer for confirmation. The developer MUST approve the commit
+before it is created. A commit MUST NOT be created — even with approval — if either
+of the following conditions fails:
 
 - `tsc --noEmit` (or `npm run build`) exits with zero errors in all affected packages.
 - `npm test` exits with zero test failures in all affected packages.
@@ -174,14 +176,15 @@ If compilation or tests fail, the commit is blocked. The failing output MUST be
 surfaced to the developer before any commit is attempted. Partial work MUST be staged
 and stashed or left uncommitted until the failure is resolved.
 
-Auto-commit is activated via the Spec Kit git extension (`after_*` hooks in
-`.specify/extensions.yml` and `auto_commit` entries in
-`.specify/extensions/git/git-config.yml`). Both are set to mandatory and enabled
-per this rule. Disabling auto-commit requires an explicit constitution amendment.
+Commit proposals are surfaced via the Spec Kit git extension (`after_*` hooks in
+`.specify/extensions.yml`, all set to `optional: true`). The `auto_commit` entries in
+`.specify/extensions/git/git-config.yml` are enabled so the commit executes once the
+developer confirms. Silent auto-commits that bypass developer confirmation are
+forbidden by this rule.
 
-**Rationale**: Frequent, verified commits keep the git history granular and traceable
-to individual spec artifacts. Gating commits on compilation + test success ensures
-the `main` branch is never broken by in-progress work.
+**Rationale**: Confirmation before commit keeps the developer in control of the git
+history while still ensuring every command output is tracked. Gating on compilation
++ test success ensures no broken state is ever committed.
 
 **Amendment procedure**: A principle may be changed only by opening a PR that (a) edits
 this file, (b) bumps `CONSTITUTION_VERSION` per semantic versioning rules, (c) updates
@@ -197,4 +200,4 @@ or chat-only amendments are binding.
 confirming each gate passes or documenting the deviation with justification. Reviewers
 MUST reject PRs where the Constitution Check section is absent.
 
-**Version**: 1.1.0 | **Ratified**: 2026-06-02 | **Last Amended**: 2026-06-02
+**Version**: 1.1.1 | **Ratified**: 2026-06-02 | **Last Amended**: 2026-06-02
