@@ -17,6 +17,16 @@ export function LobbyPage() {
     }
   }, [navigate, room]);
 
+  // Automatic 2-second polling — stops on unmount via clearInterval cleanup
+  useEffect(() => {
+    const id = setInterval(() => {
+      roomStore.fetchRoom().catch(() => {
+        // Silent retry per FR-008a
+      });
+    }, 2000);
+    return () => clearInterval(id);
+  }, [roomStore]);
+
   async function handleRefresh() {
     try {
       setRefreshError(null);
@@ -58,10 +68,10 @@ export function LobbyPage() {
         </Card>
 
         <Card title="Status">
-          <p className="status-line" style={{ backgroundColor: isLoading ? '#fef3c7' : '#e0e7ff', color: isLoading ? '#b45309' : '#3730a3' }}>
+          <p className="status-line" style={{ backgroundColor: isLoading ? "#fef3c7" : "#e0e7ff", color: isLoading ? "#b45309" : "#3730a3" }}>
             {isLoading ? "Refreshing players..." : "Ready to play"}
           </p>
-          <p style={{ marginTop: '8px' }}>{error ?? refreshError ?? "Waiting for the host to start the game."}</p>
+          <p style={{ marginTop: "8px" }}>{error ?? refreshError ?? "Waiting for the host to start the game."}</p>
         </Card>
       </div>
 
@@ -69,9 +79,17 @@ export function LobbyPage() {
         <button className="button button--secondary" disabled={isLoading} onClick={handleRefresh}>
           {isLoading ? "Refreshing..." : "Refresh Room"}
         </button>
-        <button className="button button--primary" onClick={() => navigate("/game")}>
-          Start Game
-        </button>
+        {room.isHost && (
+          <button
+            className="button button--primary"
+            disabled={room.participants.length < 2}
+            onClick={() => {
+              // No-op — game start flow implemented in next feature group
+            }}
+          >
+            Start Game
+          </button>
+        )}
       </div>
     </section>
   );
