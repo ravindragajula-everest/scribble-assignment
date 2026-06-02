@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
 import { useRoomStore } from "../state/roomStore";
+import { validatePlayerName, validateRoomCode } from "../utils/validation";
 
 export function JoinRoomPage() {
   const [playerName, setPlayerName] = useState("");
@@ -13,9 +14,21 @@ export function JoinRoomPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const nameError = validatePlayerName(playerName);
+    if (nameError) {
+      setError(nameError);
+      return;
+    }
+
+    const codeError = validateRoomCode(roomCode);
+    if (codeError) {
+      setError(codeError);
+      return;
+    }
+
     try {
       setError(null);
-      await roomStore.joinRoom(roomCode.toUpperCase(), playerName);
+      await roomStore.joinRoom(roomCode.trim().toUpperCase(), playerName.trim());
       navigate("/lobby");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to join room");
@@ -37,6 +50,7 @@ export function JoinRoomPage() {
             value={playerName}
             onChange={(event) => setPlayerName(event.target.value)}
             placeholder="Second pencil"
+            aria-describedby={error ? "join-error" : undefined}
           />
         </label>
 
@@ -47,9 +61,10 @@ export function JoinRoomPage() {
             value={roomCode}
             onChange={(event) => setRoomCode(event.target.value.toUpperCase())}
             placeholder="ABCD"
+            aria-describedby={error ? "join-error" : undefined}
           />
         </label>
-        {error ? <p className="form__error">{error}</p> : null}
+        {error ? <p id="join-error" className="form__error">{error}</p> : null}
         <div className="button-row">
           <button className="button button--primary" type="submit">
             Join Lobby
