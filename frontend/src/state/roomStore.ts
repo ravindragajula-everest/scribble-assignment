@@ -105,6 +105,31 @@ class RoomStore {
     this.setRoomSnapshot(response.room);
     return response.room;
   }
+
+  async submitGuess(text: string) {
+    if (!this.state.room || !this.state.participantId) return null;
+    const response = await api.submitGuess(
+      this.state.room.code,
+      this.state.participantId,
+      text
+    );
+    this.setRoomSnapshot(response.room);
+    return response;
+  }
+
+  async addStroke(points: Array<{ x: number; y: number }>) {
+    if (!this.state.room || !this.state.participantId) return null;
+    const response = await api.addStroke(this.state.room.code, this.state.participantId, points);
+    this.setRoomSnapshot(response.room);
+    return response.room;
+  }
+
+  async clearStrokes() {
+    if (!this.state.room || !this.state.participantId) return null;
+    const response = await api.clearStrokes(this.state.room.code, this.state.participantId);
+    this.setRoomSnapshot(response.room);
+    return response.room;
+  }
 }
 
 const RoomStoreContext = createContext<RoomStore | null>(null);

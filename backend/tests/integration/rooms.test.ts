@@ -166,3 +166,169 @@ describe("POST /rooms/:code/start", () => {
     expect(res.status).toBe(409);
   });
 });
+
+describe("POST /rooms/:code/guesses", () => {
+  let server: TestServer;
+
+  beforeAll(async () => { server = await startTestServer(); });
+  afterAll(async () => { await server.close(); });
+
+  async function setupGame() {
+    const createRes = await post(server.baseUrl, "/rooms", { playerName: "Alice" });
+    const { participantId: hostId, room } = await createRes.json() as { participantId: string; room: { code: string } };
+    const joinRes = await post(server.baseUrl, `/rooms/${room.code}/join`, { playerName: "Bob" });
+    const { participantId: guestId } = await joinRes.json() as { participantId: string };
+    await post(server.baseUrl, `/rooms/${room.code}/start`, { participantId: hostId });
+    return { code: room.code, hostId, guestId };
+  }
+
+  it("returns 201 with isCorrect: true for correct guess", async () => {
+    const { code, guestId } = await setupGame();
+    const res = await post(server.baseUrl, `/rooms/${code}/guesses`, { participantId: guestId, text: "rocket" });
+    expect(res.status).toBe(201);
+    const data = await res.json() as { guess: { isCorrect: boolean } };
+    expect(data.guess.isCorrect).toBe(true);
+  });
+
+  it("awards 100 points for correct guess", async () => {
+    const { code, guestId } = await setupGame();
+    await post(server.baseUrl, `/rooms/${code}/guesses`, { participantId: guestId, text: "ROCKET" });
+    const snapRes = await get(server.baseUrl, `/rooms/${code}?participantId=${guestId}`);
+    const data = await snapRes.json() as { room: { participants: Array<{ id: string; score: number }> } };
+    const guestScore = data.room.participants.find((p) => p.id === guestId)?.score;
+    expect(guestScore).toBe(100);
+  });
+
+  it("returns 201 with isCorrect: false for incorrect guess; score unchanged", async () => {
+    const { code, guestId } = await setupGame();
+    const res = await post(server.baseUrl, `/rooms/${code}/guesses`, { participantId: guestId, text: "pizza" });
+    expect(res.status).toBe(201);
+    const data = await res.json() as { guess: { isCorrect: boolean }; room: { participants: Array<{ id: string; score: number }> } };
+    expect(data.guess.isCorrect).toBe(false);
+    const guestScore = data.room.participants.find((p) => p.id === guestId)?.score;
+    expect(guestScore).toBe(0);
+  });
+
+  it("returns 403 when drawer submits a guess", async () => {
+    const { code, hostId } = await setupGame();
+    const res = await post(server.baseUrl, `/rooms/${code}/guesses`, { participantId: hostId, text: "rocket" });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 400 for empty guess text", async () => {
+    const { code, guestId } = await setupGame();
+    const res = await post(server.baseUrl, `/rooms/${code}/guesses`, { participantId: guestId, text: "" });
+    expect(res.status).toBe(400);
+    const data = await res.json() as { message: string };
+    expect(data.message).toBe("Guess cannot be empty");
+  });
+
+  it("GET /rooms/:code after guess includes guesses array", async () => {
+    const { code, guestId } = await setupGame();
+    await post(server.baseUrl, `/rooms/${code}/guesses`, { participantId: guestId, text: "pizza" });
+    const snapRes = await get(server.baseUrl, `/rooms/${code}?participantId=${guestId}`);
+    const data = await snapRes.json() as { room: { guesses: Array<{ text: string }> } };
+    expect(data.room.guesses.length).toBe(1);
+    expect(data.room.guesses[0].text).toBe("pizza");
+  });
+});
+
+describe("POST /rooms/:code/strokes", () => {
+  let server: TestServer;
+
+  beforeAll(async () => { server = await startTestServer(); });
+  afterAll(async () => { await server.close(); });
+
+  async function setupGame() {
+    const createRes = await post(server.baseUrl, "/rooms", { playerName: "Alice" });
+    const { participantId: hostId, room } = await createRes.json() as { participantId: string; room: { code: string } };
+    const joinRes = await post(server.baseUrl, `/rooms/${room.code}/join`, { playerName: "Bob" });
+    const { participantId: guestId } = await joinRes.json() as { participantId: string };
+    await post(server.baseUrl, `/rooms/${room.code}/start`, { participantId: hostId });
+    return { code: room.code, hostId, guestId };
+  }
+
+  it("returns 201 and appends stroke for drawer", async () => {
+    const { code, hostId } = await setupGame();
+    const res = await post(server.baseUrl, `/rooms/${code}/strokes`, {
+      participantId: hostId,
+      points: [{ x: 10, y: 20 }, { x: 30, y: 40 }],
+      color: "#1e1e1e",
+      lineWidth: 3
+    });
+    expect(res.status).toBe(201);
+    const data = await res.json() as { room: { strokes: unknown[] } };
+    expect(data.room.strokes.length).toBe(1);
+  });
+
+  it("returns 403 for non-drawer", async () => {
+    const { code, guestId } = await setupGame();
+    const res = await post(server.baseUrl, `/rooms/${code}/strokes`, {
+      participantId: guestId,
+      points: [{ x: 0, y: 0 }],
+      color: "#000",
+      lineWidth: 2
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("GET /rooms/:code after stroke returns strokes array", async () => {
+    const { code, hostId } = await setupGame();
+    await post(server.baseUrl, `/rooms/${code}/strokes`, {
+      participantId: hostId,
+      points: [{ x: 5, y: 5 }],
+      color: "#1e1e1e",
+      lineWidth: 3
+    });
+    const snapRes = await get(server.baseUrl, `/rooms/${code}?participantId=${hostId}`);
+    const data = await snapRes.json() as { room: { strokes: unknown[] } };
+    expect(data.room.strokes.length).toBe(1);
+  });
+});
+
+describe("DELETE /rooms/:code/strokes", () => {
+  let server: TestServer;
+
+  beforeAll(async () => { server = await startTestServer(); });
+  afterAll(async () => { await server.close(); });
+
+  async function setupGameWithStroke() {
+    const createRes = await post(server.baseUrl, "/rooms", { playerName: "Alice" });
+    const { participantId: hostId, room } = await createRes.json() as { participantId: string; room: { code: string } };
+    const joinRes = await post(server.baseUrl, `/rooms/${room.code}/join`, { playerName: "Bob" });
+    const { participantId: guestId } = await joinRes.json() as { participantId: string };
+    await post(server.baseUrl, `/rooms/${room.code}/start`, { participantId: hostId });
+    await post(server.baseUrl, `/rooms/${room.code}/strokes`, {
+      participantId: hostId,
+      points: [{ x: 10, y: 10 }],
+      color: "#000",
+      lineWidth: 2
+    });
+    return { code: room.code, hostId, guestId };
+  }
+
+  it("returns 200 and clears strokes for drawer", async () => {
+    const { code, hostId } = await setupGameWithStroke();
+    const res = await post(server.baseUrl, `/rooms/${code}/strokes`, { method: "DELETE", participantId: hostId });
+    // Note: using DELETE via helper that posts body
+    const deleteRes = await fetch(`${server.baseUrl}/rooms/${code}/strokes`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ participantId: hostId })
+    });
+    expect(deleteRes.status).toBe(200);
+    const data = await deleteRes.json() as { room: { strokes: unknown[] } };
+    expect(data.room.strokes).toEqual([]);
+    void res;
+  });
+
+  it("returns 403 for non-drawer", async () => {
+    const { code, guestId } = await setupGameWithStroke();
+    const deleteRes = await fetch(`${server.baseUrl}/rooms/${code}/strokes`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ participantId: guestId })
+    });
+    expect(deleteRes.status).toBe(403);
+  });
+});

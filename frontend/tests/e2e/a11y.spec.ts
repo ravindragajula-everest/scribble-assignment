@@ -41,7 +41,7 @@ test.describe("Accessibility — WCAG 2.1 AA", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("Game screen has no violations after game starts", async ({ browser }) => {
+  test("Game screen has no violations after game starts (gameplay)", async ({ browser }) => {
     const hostCtx = await browser.newContext();
     const hostPage = await hostCtx.newPage();
     await hostPage.goto("/create-room");
