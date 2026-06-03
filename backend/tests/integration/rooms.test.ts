@@ -332,3 +332,139 @@ describe("DELETE /rooms/:code/strokes", () => {
     expect(deleteRes.status).toBe(403);
   });
 });
+
+describe("POST /rooms/:code/end", () => {
+  let server: TestServer;
+
+  beforeAll(async () => { server = await startTestServer(); });
+  afterAll(async () => { await server.close(); });
+
+  async function setupInGameRoom() {
+    const createRes = await post(server.baseUrl, "/rooms", { playerName: "Alice" });
+    const { participantId: hostId, room } = await createRes.json() as { participantId: string; room: { code: string } };
+    const joinRes = await post(server.baseUrl, `/rooms/${room.code}/join`, { playerName: "Bob" });
+    const { participantId: guestId } = await joinRes.json() as { participantId: string };
+    await post(server.baseUrl, `/rooms/${room.code}/start`, { participantId: hostId });
+    return { code: room.code, hostId, guestId };
+  }
+
+  it("returns 200 with status result for host", async () => {
+    const { code, hostId } = await setupInGameRoom();
+    const res = await post(server.baseUrl, `/rooms/${code}/end`, { participantId: hostId });
+    expect(res.status).toBe(200);
+    const data = await res.json() as { room: { status: string } };
+    expect(data.room.status).toBe("result");
+  });
+
+  it("includes word for ALL viewers in result status", async () => {
+    const { code, hostId, guestId } = await setupInGameRoom();
+    await post(server.baseUrl, `/rooms/${code}/end`, { participantId: hostId });
+    const snapRes = await get(server.baseUrl, `/rooms/${code}?participantId=${guestId}`);
+    const data = await snapRes.json() as { room: { word: string; status: string } };
+    expect(data.room.status).toBe("result");
+    expect(data.room.word).toBe("rocket");
+  });
+
+  it("returns 403 for non-host", async () => {
+    const { code, guestId } = await setupInGameRoom();
+    const res = await post(server.baseUrl, `/rooms/${code}/end`, { participantId: guestId });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 409 when not in_game", async () => {
+    const createRes = await post(server.baseUrl, "/rooms", { playerName: "Alice" });
+    const { participantId: hostId, room } = await createRes.json() as { participantId: string; room: { code: string } };
+    const res = await post(server.baseUrl, `/rooms/${room.code}/end`, { participantId: hostId });
+    expect(res.status).toBe(409);
+  });
+});
+
+describe("POST /rooms/:code/restart", () => {
+  let server: TestServer;
+
+  beforeAll(async () => { server = await startTestServer(); });
+  afterAll(async () => { await server.close(); });
+
+  async function setupResultRoom() {
+    const createRes = await post(server.baseUrl, "/rooms", { playerName: "Alice" });
+    const { participantId: hostId, room } = await createRes.json() as { participantId: string; room: { code: string } };
+    const joinRes = await post(server.baseUrl, `/rooms/${room.code}/join`, { playerName: "Bob" });
+    const { participantId: guestId } = await joinRes.json() as { participantId: string };
+    await post(server.baseUrl, `/rooms/${room.code}/start`, { participantId: hostId });
+    await post(server.baseUrl, `/rooms/${room.code}/guesses`, { participantId: guestId, text: "rocket" });
+    await post(server.baseUrl, `/rooms/${room.code}/end`, { participantId: hostId });
+    return { code: room.code, hostId, guestId };
+  }
+
+  it("returns 200 with status lobby and scores reset for host", async () => {
+    const { code, hostId } = await setupResultRoom();
+    const res = await post(server.baseUrl, `/rooms/${code}/restart`, { participantId: hostId });
+    expect(res.status).toBe(200);
+    const data = await res.json() as { room: { status: string; guesses: unknown[]; participants: Array<{ score: number }> } };
+    expect(data.room.status).toBe("lobby");
+    expect(data.room.guesses).toEqual([]);
+    expect(data.room.participants.every((p) => p.score === 0)).toBe(true);
+  });
+
+  it("returns 403 for non-host", async () => {
+    const { code, guestId } = await setupResultRoom();
+    const res = await post(server.baseUrl, `/rooms/${code}/restart`, { participantId: guestId });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 409 when not in result status", async () => {
+    const createRes = await post(server.baseUrl, "/rooms", { playerName: "Alice" });
+    const { participantId: hostId, room } = await createRes.json() as { participantId: string; room: { code: string } };
+    await post(server.baseUrl, `/rooms/${room.code}/join`, { playerName: "Bob" });
+    await post(server.baseUrl, `/rooms/${room.code}/start`, { participantId: hostId });
+    const res = await post(server.baseUrl, `/rooms/${room.code}/restart`, { participantId: hostId });
+    expect(res.status).toBe(409);
+  });
+});
+
+describe("POST /rooms/:code/exit", () => {
+  let server: TestServer;
+
+  beforeAll(async () => { server = await startTestServer(); });
+  afterAll(async () => { await server.close(); });
+
+  async function setupInGame() {
+    const createRes = await post(server.baseUrl, "/rooms", { playerName: "Alice" });
+    const { participantId: hostId, room } = await createRes.json() as { participantId: string; room: { code: string } };
+    const joinRes = await post(server.baseUrl, `/rooms/${room.code}/join`, { playerName: "Bob" });
+    const { participantId: guestId } = await joinRes.json() as { participantId: string };
+    await post(server.baseUrl, `/rooms/${room.code}/start`, { participantId: hostId });
+    return { code: room.code, hostId, guestId };
+  }
+
+  it("returns 200 with status lobby when host exits from in_game", async () => {
+    const { code, hostId } = await setupInGame();
+    const res = await post(server.baseUrl, `/rooms/${code}/exit`, { participantId: hostId });
+    expect(res.status).toBe(200);
+    const data = await res.json() as { room: { status: string; guesses: unknown[] } };
+    expect(data.room.status).toBe("lobby");
+    expect(data.room.guesses).toEqual([]);
+  });
+
+  it("returns 200 with status lobby when host exits from result", async () => {
+    const { code, hostId } = await setupInGame();
+    await post(server.baseUrl, `/rooms/${code}/end`, { participantId: hostId });
+    const res = await post(server.baseUrl, `/rooms/${code}/exit`, { participantId: hostId });
+    expect(res.status).toBe(200);
+    const data = await res.json() as { room: { status: string } };
+    expect(data.room.status).toBe("lobby");
+  });
+
+  it("returns 403 for non-host", async () => {
+    const { code, guestId } = await setupInGame();
+    const res = await post(server.baseUrl, `/rooms/${code}/exit`, { participantId: guestId });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 409 when room is already in lobby", async () => {
+    const createRes = await post(server.baseUrl, "/rooms", { playerName: "Alice" });
+    const { participantId: hostId, room } = await createRes.json() as { participantId: string; room: { code: string } };
+    const res = await post(server.baseUrl, `/rooms/${room.code}/exit`, { participantId: hostId });
+    expect(res.status).toBe(409);
+  });
+});

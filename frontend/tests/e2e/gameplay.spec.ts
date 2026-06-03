@@ -119,26 +119,29 @@ test.describe("US3 — Guess submission", () => {
     await guestCtx.close();
   });
 
-  test("correct guess 'ROCKET' gives score 100 immediately", async ({ browser }) => {
+  test("correct guess 'ROCKET' appears in history immediately (score hidden during gameplay)", async ({ browser }) => {
     const { hostCtx, guestCtx, guestPage } = await startGame(browser);
 
     await guestPage.getByPlaceholder("Type your guess here...").fill("ROCKET");
     await guestPage.getByRole("button", { name: "Submit Guess" }).click();
 
-    // Score 100 should appear immediately on guesser's screen
-    await expect(guestPage.getByText("100")).toBeVisible({ timeout: 5000 });
+    // Guess text appears immediately; score is HIDDEN during gameplay (shows — not 100)
+    await expect(guestPage.getByText("ROCKET")).toBeVisible({ timeout: 5000 });
+    await expect(guestPage.locator("strong:has-text('100')")).not.toBeVisible();
 
     await hostCtx.close();
     await guestCtx.close();
   });
 
-  test("correct guess appears in history with checkmark immediately", async ({ browser }) => {
+  test("correct guess appears in history WITHOUT checkmark during gameplay", async ({ browser }) => {
     const { hostCtx, guestCtx, guestPage } = await startGame(browser);
 
     await guestPage.getByPlaceholder("Type your guess here...").fill("rocket");
     await guestPage.getByRole("button", { name: "Submit Guess" }).click();
 
-    await expect(guestPage.getByText("✓")).toBeVisible({ timeout: 5000 });
+    // Guess text visible immediately; ✓ is HIDDEN until End Round
+    await expect(guestPage.getByText("rocket")).toBeVisible({ timeout: 5000 });
+    await expect(guestPage.locator("li:has-text('rocket') span:has-text('✓')")).not.toBeVisible();
 
     await hostCtx.close();
     await guestCtx.close();
@@ -165,16 +168,20 @@ test.describe("US4 — Guess history synced to all players", () => {
 // ─── US5: Scoring ─────────────────────────────────────────────────────────────
 
 test.describe("US5 — Scoring updates", () => {
-  test("scoreboard shows score 100 for guesser after correct guess within 2500ms", async ({ browser }) => {
+  test("scoreboard shows — (hidden) during gameplay; 100 revealed only after End Round", async ({ browser }) => {
     const { hostCtx, hostPage, guestCtx, guestPage } = await startGame(browser);
 
-    // Submit correct guess from guest
     await guestPage.getByPlaceholder("Type your guess here...").fill("rocket");
     await guestPage.getByRole("button", { name: "Submit Guess" }).click();
+    await expect(guestPage.getByText("rocket")).toBeVisible({ timeout: 5000 });
 
-    // Both guesser and drawer should see score 100 in scoreboard within one polling cycle
-    await expect(guestPage.getByText("100")).toBeVisible({ timeout: 2500 });
-    await expect(hostPage.getByText("100")).toBeVisible({ timeout: 2500 });
+    // Score 100 HIDDEN during gameplay — scoreboard shows — instead
+    await expect(guestPage.locator("strong:has-text('100')")).not.toBeVisible();
+    await expect(guestPage.getByText("—").first()).toBeVisible({ timeout: 2500 });
+
+    // After End Round — score 100 revealed
+    await hostPage.getByRole("button", { name: "End Round" }).click();
+    await expect(guestPage.locator("strong:has-text('100')")).toBeVisible({ timeout: 2500 });
 
     await hostCtx.close();
     await guestCtx.close();

@@ -25,7 +25,7 @@ export interface Participant {
 
 export interface RoomSnapshot {
   code: string;
-  status: "lobby" | "in_game";
+  status: "lobby" | "in_game" | "result";
   participants: Participant[];
   availableWords: string[];
   roles: ParticipantRole[];
@@ -109,5 +109,23 @@ export const api = {
       `/rooms/${encodeURIComponent(code)}/strokes`,
       { method: "DELETE", body: JSON.stringify({ participantId }) }
     );
+  },
+  exitRound(code: string, participantId: string) {
+    return request<{ room: RoomSnapshot }>(`/rooms/${encodeURIComponent(code)}/exit`, {
+      method: "POST",
+      body: JSON.stringify({ participantId })
+    });
+  },
+  endRound(code: string, participantId: string) {
+    return request<{ room: RoomSnapshot }>(`/rooms/${encodeURIComponent(code)}/end`, {
+      method: "POST",
+      body: JSON.stringify({ participantId })
+    });
+  },
+  restartGame(code: string, participantId: string) {
+    return request<{ room: RoomSnapshot }>(`/rooms/${encodeURIComponent(code)}/restart`, {
+      method: "POST",
+      body: JSON.stringify({ participantId })
+    });
   }
 };

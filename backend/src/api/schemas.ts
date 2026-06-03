@@ -36,6 +36,18 @@ export const clearStrokesSchema = z.object({
   participantId: z.string().trim().min(1, "Participant ID is required")
 });
 
+export const endRoundSchema = z.object({
+  participantId: z.string().trim().min(1, "Participant ID is required")
+});
+
+export const restartGameSchema = z.object({
+  participantId: z.string().trim().min(1, "Participant ID is required")
+});
+
+export const exitRoundSchema = z.object({
+  participantId: z.string().trim().min(1, "Participant ID is required")
+});
+
 export class HttpError extends Error {
   statusCode: number;
 

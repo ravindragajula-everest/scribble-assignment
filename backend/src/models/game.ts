@@ -1,5 +1,5 @@
 export type ParticipantRole = "drawer" | "guesser";
-export type RoomStatus = "lobby" | "in_game";
+export type RoomStatus = "lobby" | "in_game" | "result";
 
 export interface Stroke {
   id: string;

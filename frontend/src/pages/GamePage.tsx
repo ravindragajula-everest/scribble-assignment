@@ -21,6 +21,7 @@ export function GamePage() {
   // Guesser read-only canvas ref
   const guestCanvasRef = useRef<HTMLCanvasElement>(null);
 
+  // (a) redirect guard — updated to allow both in_game and result
   useEffect(() => {
     if (!room) {
       navigate("/", { replace: true });
@@ -57,7 +58,8 @@ export function GamePage() {
     }
   }, [room?.strokes, room?.isHost]);
 
-  if (room?.status !== "in_game") {
+  // (b) early-return guard — allow both in_game and result
+  if (!room || (room.status !== "in_game" && room.status !== "result")) {
     return null;
   }
 
@@ -93,7 +95,6 @@ export function GamePage() {
     pointsRef.current.push(pos);
   }
 
-  // async — React invokes as fire-and-forget; no wrapper needed in JSX attributes
   async function stopDraw() {
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
@@ -110,6 +111,17 @@ export function GamePage() {
     await roomStore.clearStrokes().catch(() => {});
   }
 
+  // (c) End Round handler
+  async function handleEndRound() {
+    await roomStore.endRound().catch(() => {});
+  }
+
+  // Restart handler
+  async function handleRestart() {
+    await roomStore.restartGame().catch(() => {});
+    navigate("/lobby");
+  }
+
   return (
     <section className="panel game-page">
       <div className="game-page__header">
@@ -120,97 +132,124 @@ export function GamePage() {
         <RoomCodeBadge code={room.code} />
       </div>
 
-      <div className="game-page__layout">
-        <aside className="game-page__sidebar game-page__sidebar--left">
-          <Scoreboard participants={room.participants} />
-          <ResultPanel guesses={room.guesses} />
-        </aside>
+      {/* (c) Inline word reveal — visible to all when status = result */}
+      {room.status === "result" && room.word && (
+        <div style={{ padding: "8px 16px", backgroundColor: "#f0fdf4", borderRadius: "6px", marginBottom: "12px" }}>
+          <strong>The secret word was: {room.word}</strong>
+        </div>
+      )}
 
-        <div className="game-page__main">
-          <Card title="Canvas">
-            {room.isHost ? (
-              <>
+      {/* Game layout — always visible (sidebar reveals data based on status) */}
+      <div className="game-page__layout">
+          <aside className="game-page__sidebar game-page__sidebar--left">
+            {/* (b) Pass status prop — Scoreboard and ResultPanel gate their reveal */}
+            <Scoreboard participants={room.participants} status={room.status} />
+            <ResultPanel guesses={room.guesses} status={room.status} />
+          </aside>
+
+          <div className="game-page__main">
+            <Card title="Canvas">
+              {room.isHost ? (
+                <>
+                  <canvas
+                    ref={canvasRef}
+                    width={800}
+                    height={500}
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      cursor: "crosshair",
+                      backgroundColor: "#ffffff",
+                      display: "block",
+                      maxWidth: "100%"
+                    }}
+                    onMouseDown={startDraw}
+                    onMouseMove={draw}
+                    onMouseUp={stopDraw}
+                    onMouseLeave={stopDraw}
+                    aria-label="Drawing canvas"
+                  />
+                  <div className="button-row" style={{ marginTop: "8px" }}>
+                    <button
+                      className="button button--secondary"
+                      onClick={() => { void clearCanvas(); }}
+                    >
+                      Clear Canvas
+                    </button>
+                  </div>
+                </>
+              ) : (
                 <canvas
-                  ref={canvasRef}
+                  ref={guestCanvasRef}
                   width={800}
                   height={500}
                   style={{
                     border: "1px solid #e5e7eb",
-                    cursor: "crosshair",
                     backgroundColor: "#ffffff",
                     display: "block",
                     maxWidth: "100%"
                   }}
-                  onMouseDown={startDraw}
-                  onMouseMove={draw}
-                  onMouseUp={stopDraw}
-                  onMouseLeave={stopDraw}
-                  aria-label="Drawing canvas"
+                  aria-label="Drawing canvas (read-only)"
                 />
-                <div className="button-row" style={{ marginTop: "8px" }}>
-                  <button
-                    className="button button--secondary"
-                    onClick={() => { void clearCanvas(); }}
-                  >
-                    Clear Canvas
-                  </button>
+              )}
+            </Card>
+          </div>
+
+          <aside className="game-page__sidebar game-page__sidebar--right">
+            <Card title="Player Info">
+              <dl className="detail-list">
+                <div>
+                  <dt>Name</dt>
+                  <dd>{viewer?.name ?? "Unknown player"}</dd>
                 </div>
-              </>
-            ) : (
-              <canvas
-                ref={guestCanvasRef}
-                width={800}
-                height={500}
-                style={{
-                  border: "1px solid #e5e7eb",
-                  backgroundColor: "#ffffff",
-                  display: "block",
-                  maxWidth: "100%"
-                }}
-                aria-label="Drawing canvas (read-only)"
-              />
-            )}
-          </Card>
+                <div>
+                  <dt>Role</dt>
+                  <dd>{room.isHost ? "Drawer" : "Guesser"}</dd>
+                </div>
+                <div>
+                  <dt>Drawer</dt>
+                  <dd>{drawerName}</dd>
+                </div>
+                {room.isHost && room.word && (
+                  <div>
+                    <dt>Secret Word</dt>
+                    <dd aria-label="Secret word">{room.word}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt>Status</dt>
+                  <dd>Playing</dd>
+                </div>
+              </dl>
+            </Card>
+
+            <Card title="Your Guess">
+              <GuessForm />
+            </Card>
+          </aside>
         </div>
 
-        <aside className="game-page__sidebar game-page__sidebar--right">
-          <Card title="Player Info">
-            <dl className="detail-list">
-              <div>
-                <dt>Name</dt>
-                <dd>{viewer?.name ?? "Unknown player"}</dd>
-              </div>
-              <div>
-                <dt>Role</dt>
-                <dd>{room.isHost ? "Drawer" : "Guesser"}</dd>
-              </div>
-              <div>
-                <dt>Drawer</dt>
-                <dd>{drawerName}</dd>
-              </div>
-              {room.isHost && room.word && (
-                <div>
-                  <dt>Secret Word</dt>
-                  <dd aria-label="Secret word">{room.word}</dd>
-                </div>
-              )}
-              <div>
-                <dt>Status</dt>
-                <dd>Playing</dd>
-              </div>
-            </dl>
-          </Card>
-
-          <Card title="Your Guess">
-            <GuessForm />
-          </Card>
-        </aside>
-      </div>
-
       <div className="button-row">
-        <button className="button button--secondary" onClick={() => navigate("/lobby")}>
-          Exit Game
-        </button>
+        {/* End Round button — host only, in_game */}
+        {room.isHost && room.status === "in_game" && (
+          <button className="button button--secondary" onClick={handleEndRound}>
+            End Round
+          </button>
+        )}
+        {/* (d) Play Again button — host only, result (inline in game layout) */}
+        {room.isHost && room.status === "result" && (
+          <button className="button button--primary" onClick={handleRestart}>
+            Play Again
+          </button>
+        )}
+        {/* (d) Exit Game — host only; resets room to lobby */}
+        {room.isHost && (
+          <button
+            className="button button--secondary"
+            onClick={() => { void roomStore.exitRound().then(() => navigate("/lobby")); }}
+          >
+            Exit Game
+          </button>
+        )}
       </div>
     </section>
   );
