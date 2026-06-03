@@ -1,9 +1,10 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: [TEMPLATE] → 1.0.0 (initial ratification — all placeholders resolved)
+Version change: 1.1.0 → 1.1.1 (PATCH: Continuous Commit Discipline clarified —
+  confirmation required before any commit; automatic silent commits removed)
 
-Principles added (new, no prior named principles):
+Principles unchanged:
   I.   Code Quality & TypeScript Discipline
   II.  Testing Standards (NON-NEGOTIABLE)
   III. REST API Conventions
@@ -11,20 +12,23 @@ Principles added (new, no prior named principles):
   V.   Accessibility & Modern UI
 
 Sections added:
-  - Hardcoded Constraints (technical out-of-scope boundaries from README)
-  - Development Workflow & Review Gates
+  - "Continuous Commit Discipline" under Development Workflow & Review Gates
+
+Sections unchanged:
+  - Hardcoded Constraints
+  - Core Principles (I–V)
+  - Amendment procedure, Versioning policy, Compliance review
 
 Templates status:
-  ✅ .specify/memory/constitution.md — this file (written now)
-  ✅ .specify/templates/plan-template.md — Constitution Check section already present;
-     gates now map to the five principles above (no rewrite needed, content advisory)
-  ✅ .specify/templates/spec-template.md — User Scenarios and Requirements sections
-     align with principle II (testing) and III (REST); no structural change needed
-  ✅ .specify/templates/tasks-template.md — task phases for unit/integration/e2e tests
-     align with principle II; [P] parallelism aligns with principle IV; no rewrite needed
+  ✅ .specify/memory/constitution.md — this file (updated now)
+  ✅ .specify/extensions/git/git-config.yml — all after_* auto_commit entries enabled
+  ✅ .specify/extensions.yml — all after_* hooks are optional (confirmation required)
+  ✅ .specify/templates/plan-template.md — no change required (Constitution Check gates unchanged)
+  ✅ .specify/templates/spec-template.md — no change required
+  ✅ .specify/templates/tasks-template.md — no change required
 
 Deferred TODOs:
-  - None. All fields resolved from codebase context and user input.
+  - None.
 -->
 
 # Scribble Constitution
@@ -158,6 +162,30 @@ Every code change MUST pass all five gates before merge:
 5. Interactive elements pass a manual keyboard-navigation check and axe-core (or
    Playwright accessibility assertions) shows zero violations.
 
+**Continuous Commit Discipline (NON-NEGOTIABLE)**:
+
+After every completed SpecKit command or implementation task, a commit MUST be
+proposed to the developer for confirmation. The developer MUST approve the commit
+before it is created. A commit MUST NOT be created — even with approval — if either
+of the following conditions fails:
+
+- `tsc --noEmit` (or `npm run build`) exits with zero errors in all affected packages.
+- `npm test` exits with zero test failures in all affected packages.
+
+If compilation or tests fail, the commit is blocked. The failing output MUST be
+surfaced to the developer before any commit is attempted. Partial work MUST be staged
+and stashed or left uncommitted until the failure is resolved.
+
+Commit proposals are surfaced via the Spec Kit git extension (`after_*` hooks in
+`.specify/extensions.yml`, all set to `optional: true`). The `auto_commit` entries in
+`.specify/extensions/git/git-config.yml` are enabled so the commit executes once the
+developer confirms. Silent auto-commits that bypass developer confirmation are
+forbidden by this rule.
+
+**Rationale**: Confirmation before commit keeps the developer in control of the git
+history while still ensuring every command output is tracked. Gating on compilation
++ test success ensures no broken state is ever committed.
+
 **Amendment procedure**: A principle may be changed only by opening a PR that (a) edits
 this file, (b) bumps `CONSTITUTION_VERSION` per semantic versioning rules, (c) updates
 all affected templates and docs, and (d) receives explicit reviewer sign-off. No verbal
@@ -172,4 +200,4 @@ or chat-only amendments are binding.
 confirming each gate passes or documenting the deviation with justification. Reviewers
 MUST reject PRs where the Constitution Check section is absent.
 
-**Version**: 1.0.0 | **Ratified**: 2026-06-02 | **Last Amended**: 2026-06-02
+**Version**: 1.1.1 | **Ratified**: 2026-06-02 | **Last Amended**: 2026-06-02

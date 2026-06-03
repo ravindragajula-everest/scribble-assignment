@@ -74,13 +74,16 @@ hooks:
     prompt: Commit outstanding changes before issue sync?
     description: Auto-commit before tasks-to-issues conversion
     condition: null
+  # after_* hooks: optional (confirmation required) per Constitution v1.1.1
+  # Developer must approve each commit. Commits only proceed when
+  # compilation and tests pass without failure.
   after_constitution:
   - extension: git
     command: speckit.git.commit
     enabled: true
     optional: true
     prompt: Commit constitution changes?
-    description: Auto-commit after constitution update
+    description: Confirm commit after constitution update (gated on compile + test)
     condition: null
   after_specify:
   - extension: git
@@ -88,7 +91,7 @@ hooks:
     enabled: true
     optional: true
     prompt: Commit specification changes?
-    description: Auto-commit after specification
+    description: Confirm commit after specification (gated on compile + test)
     condition: null
   after_clarify:
   - extension: git
@@ -96,7 +99,7 @@ hooks:
     enabled: true
     optional: true
     prompt: Commit clarification changes?
-    description: Auto-commit after spec clarification
+    description: Confirm commit after spec clarification (gated on compile + test)
     condition: null
   after_plan:
   - extension: git
@@ -104,7 +107,7 @@ hooks:
     enabled: true
     optional: true
     prompt: Commit plan changes?
-    description: Auto-commit after implementation planning
+    description: Confirm commit after implementation planning (gated on compile + test)
     condition: null
   after_tasks:
   - extension: git
@@ -112,7 +115,7 @@ hooks:
     enabled: true
     optional: true
     prompt: Commit task changes?
-    description: Auto-commit after task generation
+    description: Confirm commit after task generation (gated on compile + test)
     condition: null
   after_implement:
   - extension: git
@@ -120,7 +123,7 @@ hooks:
     enabled: true
     optional: true
     prompt: Commit implementation changes?
-    description: Auto-commit after implementation
+    description: Confirm commit after implementation (gated on compile + test)
     condition: null
   after_checklist:
   - extension: git
@@ -128,7 +131,7 @@ hooks:
     enabled: true
     optional: true
     prompt: Commit checklist changes?
-    description: Auto-commit after checklist generation
+    description: Confirm commit after checklist generation (gated on compile + test)
     condition: null
   after_analyze:
   - extension: git
@@ -136,7 +139,7 @@ hooks:
     enabled: true
     optional: true
     prompt: Commit analysis results?
-    description: Auto-commit after analysis
+    description: Confirm commit after analysis (gated on compile + test)
     condition: null
   after_taskstoissues:
   - extension: git
@@ -144,5 +147,5 @@ hooks:
     enabled: true
     optional: true
     prompt: Commit after syncing issues?
-    description: Auto-commit after tasks-to-issues conversion
+    description: Confirm commit after tasks-to-issues conversion (gated on compile + test)
     condition: null

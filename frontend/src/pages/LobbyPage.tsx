@@ -10,10 +10,13 @@ export function LobbyPage() {
   const roomStore = useRoomStore();
   const { room, error, isLoading } = useRoomState();
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!room) {
       navigate("/", { replace: true });
+    } else if (room.status === "in_game") {
+      navigate("/game", { replace: true });
     }
   }, [navigate, room]);
 
@@ -33,6 +36,16 @@ export function LobbyPage() {
       await roomStore.fetchRoom();
     } catch (caughtError) {
       setRefreshError(caughtError instanceof Error ? caughtError.message : "Unable to refresh room");
+    }
+  }
+
+  async function handleStartGame() {
+    try {
+      setStartError(null);
+      await roomStore.startGame();
+      navigate("/game");
+    } catch (caughtError) {
+      setStartError(caughtError instanceof Error ? caughtError.message : "Unable to start game");
     }
   }
 
@@ -80,15 +93,18 @@ export function LobbyPage() {
           {isLoading ? "Refreshing..." : "Refresh Room"}
         </button>
         {room.isHost && (
-          <button
-            className="button button--primary"
-            disabled={room.participants.length < 2}
-            onClick={() => {
-              // No-op — game start flow implemented in next feature group
-            }}
-          >
-            Start Game
-          </button>
+          <>
+            <button
+              className="button button--primary"
+              disabled={room.participants.length < 2}
+              onClick={handleStartGame}
+            >
+              Start Game
+            </button>
+            {startError && (
+              <p id="start-error" className="form__error" aria-live="polite">{startError}</p>
+            )}
+          </>
         )}
       </div>
     </section>
