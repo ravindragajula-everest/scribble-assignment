@@ -52,7 +52,7 @@ description: "Task list for Result, Restart & Final Validation"
 - [ ] T008 [US1] Update `toRoomSnapshot()` in `backend/src/services/roomStore.ts` to show `word` to ALL viewers when `room.status === "result"` — change `const showWord = room.status === "result" || isDrawer;` — **SEQUENTIAL after T007** (same file); also include `drawerParticipantId` in snapshot when status is "result" (not just "in_game")
 - [ ] T009 [US1] Add `POST /:code/end` route to `backend/src/api/rooms.ts`: parse with `roomCodeParamsSchema` + `endRoundSchema`; call `endRound()`; map `not_host` → 403, `not_in_game` → 409, `not_found` → 404; return `response.json({ room: toRoomSnapshot(result.room, participantId) })`
 - [ ] T010 [P] [US1] Add `endRound()` method to `RoomStore` class in `frontend/src/state/roomStore.ts`: calls `api.endRound(room.code, participantId)`; calls `setRoomSnapshot(response.room)` on success
-- [ ] T011 [US1] Update `frontend/src/pages/GamePage.tsx`: (1) change redirect guard from `room.status !== "in_game"` to `(room.status !== "in_game" && room.status !== "result")`; (2) update the early-return `if (!room || ...)` to match; (3) add `handleEndRound()` async handler that calls `roomStore.endRound()`; (4) add "End Round" button rendered only when `room.isHost && room.status === "in_game"` in the button-row
+- [ ] T011 [US1] Update `frontend/src/pages/GamePage.tsx` — three distinct changes in one atomic commit: **(a) guards** — change `if (room?.status !== "in_game") return null` to `if (!room || (room.status !== "in_game" && room.status !== "result")) return null`; **(b) redirect useEffect** — the existing `else if (room.status === "lobby") navigate("/lobby")` is already correct (no change needed); **(c) button** — add `async function handleEndRound() { await roomStore.endRound().catch(() => {}); }` and `{room.isHost && room.status === "in_game" && <button className="button button--secondary" onClick={handleEndRound}>End Round</button>}` in the button-row
 - [ ] T012 [US1] Run `cd backend && npm test` — verify all US1 unit + integration tests pass (GREEN)
 - [ ] T013 [US1] Run `cd frontend && npx playwright test result.spec.ts --grep "End Round"` — verify US1 E2E tests pass (GREEN)
 
@@ -70,7 +70,7 @@ description: "Task list for Result, Restart & Final Validation"
 
 ### Tests for US2 (TDD — write FIRST)
 
-- [ ] T014 [P] [US2] Extend `backend/tests/integration/rooms.test.ts`: failing integration test — `GET /rooms/:code?participantId=guestId` in result status → response.room.word = "rocket" (word visible to non-host in result)
+- [ ] T014 [P] [US2] Extend `backend/tests/integration/rooms.test.ts`: write integration test — `GET /rooms/:code?participantId=guestId` in result status → response.room.word = "rocket" (word visible to non-host in result) — **Note**: this test may already be GREEN after T008 (US1) since T008 implements the word-visibility logic; unit-level coverage is in T003(d). Confirm state: if GREEN, record it as expected and proceed; if RED, T008 was incomplete — fix before moving to T016
 - [ ] T015 [US2] Add failing E2E tests to `frontend/tests/e2e/result.spec.ts`: (a) after host ends round, host sees word "rocket" on screen; (b) after host ends round, guesser sees word "rocket" on screen; (c) result view shows all participant scores and guess history
 
 ### Implementation for US2
