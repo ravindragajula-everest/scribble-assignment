@@ -126,9 +126,8 @@ test.describe("US3 — Drawer and word visibility on Game screen", () => {
     const { hostCtx, hostPage, guestCtx, guestPage } = await hostStartsGame(browser, "Alice", "Bob");
     await expect(guestPage).toHaveURL(/\/game/, { timeout: 5000 });
 
-    // On guest's screen: viewer name is "Bob", drawer name is "Alice" — no ambiguity
-    await expect(guestPage.getByText("Alice")).toBeVisible({ timeout: 5000 });
-    // On host's screen: "Alice" appears as both viewer name and drawer name — use first()
+    // "Alice" appears in scoreboard AND in drawer name field — use first() for both
+    await expect(guestPage.getByText("Alice").first()).toBeVisible({ timeout: 5000 });
     await expect(hostPage.getByText("Alice").first()).toBeVisible({ timeout: 5000 });
 
     await hostCtx.close();

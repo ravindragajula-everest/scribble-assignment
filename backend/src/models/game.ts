@@ -1,9 +1,26 @@
 export type ParticipantRole = "drawer" | "guesser";
 export type RoomStatus = "lobby" | "in_game";
 
+export interface Stroke {
+  id: string;
+  points: Array<{ x: number; y: number }>;
+  color: string;
+  lineWidth: number;
+}
+
+export interface Guess {
+  id: string;
+  participantId: string;
+  participantName: string;
+  text: string;
+  isCorrect: boolean;
+  timestamp: string;
+}
+
 export interface Participant {
   id: string;
   name: string;
+  score: number;
   joinedAt: string;
 }
 
@@ -14,6 +31,8 @@ export interface Room {
   hostId: string;
   word?: string;
   drawerParticipantId?: string;
+  guesses: Guess[];
+  strokes: Stroke[];
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +46,8 @@ export interface RoomSnapshot {
   isHost: boolean;
   word?: string;
   drawerParticipantId?: string;
+  guesses: Guess[];
+  strokes: Stroke[];
 }
 
 export interface RoomSessionResponse {

@@ -1,8 +1,25 @@
 export type ParticipantRole = "drawer" | "guesser";
 
+export interface Stroke {
+  id: string;
+  points: Array<{ x: number; y: number }>;
+  color: string;
+  lineWidth: number;
+}
+
+export interface Guess {
+  id: string;
+  participantId: string;
+  participantName: string;
+  text: string;
+  isCorrect: boolean;
+  timestamp: string;
+}
+
 export interface Participant {
   id: string;
   name: string;
+  score: number;
   joinedAt: string;
 }
 
@@ -15,6 +32,8 @@ export interface RoomSnapshot {
   isHost: boolean;
   word?: string;
   drawerParticipantId?: string;
+  guesses: Guess[];
+  strokes: Stroke[];
 }
 
 export interface RoomSessionResponse {
@@ -66,5 +85,29 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ participantId })
     });
+  },
+  submitGuess(code: string, participantId: string, text: string) {
+    return request<{ guess: Guess; room: RoomSnapshot }>(
+      `/rooms/${encodeURIComponent(code)}/guesses`,
+      { method: "POST", body: JSON.stringify({ participantId, text }) }
+    );
+  },
+  addStroke(
+    code: string,
+    participantId: string,
+    points: Array<{ x: number; y: number }>,
+    color = "#1e1e1e",
+    lineWidth = 3
+  ) {
+    return request<{ room: RoomSnapshot }>(
+      `/rooms/${encodeURIComponent(code)}/strokes`,
+      { method: "POST", body: JSON.stringify({ participantId, points, color, lineWidth }) }
+    );
+  },
+  clearStrokes(code: string, participantId: string) {
+    return request<{ room: RoomSnapshot }>(
+      `/rooms/${encodeURIComponent(code)}/strokes`,
+      { method: "DELETE", body: JSON.stringify({ participantId }) }
+    );
   }
 };
