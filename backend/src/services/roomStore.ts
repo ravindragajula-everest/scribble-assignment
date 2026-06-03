@@ -97,13 +97,34 @@ export function saveRoom(room: Room) {
   return getRoom(room.code);
 }
 
+export function startGame(code: string, participantId: string) {
+  const room = rooms.get(code);
+  if (!room) return { error: "not_found" } as const;
+  if (room.status !== "lobby") return { error: "already_started" } as const;
+  if (participantId !== room.hostId) return { error: "not_host" } as const;
+
+  room.status = "in_game";
+  room.word = STARTER_WORDS[0];
+  room.drawerParticipantId = room.hostId;
+  room.updatedAt = now();
+  rooms.set(code, room);
+  return { room: cloneRoom(room) };
+}
+
 export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSnapshot {
+  const isDrawer =
+    room.status === "in_game" &&
+    viewerParticipantId !== undefined &&
+    viewerParticipantId === room.drawerParticipantId;
+
   return {
     code: room.code,
     status: room.status,
     participants: room.participants.map((participant) => ({ ...participant })),
     availableWords: listWords(),
     roles: [...STARTER_ROLES],
-    isHost: viewerParticipantId === room.hostId
+    isHost: viewerParticipantId === room.hostId,
+    ...(room.status === "in_game" && { drawerParticipantId: room.drawerParticipantId }),
+    ...(isDrawer && { word: room.word })
   };
 }
