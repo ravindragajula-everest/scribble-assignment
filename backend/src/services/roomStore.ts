@@ -172,11 +172,60 @@ export function clearStrokes(code: string, participantId: string) {
   return { room: cloneRoom(room) };
 }
 
+export function exitRound(code: string, participantId: string) {
+  const room = rooms.get(code);
+  if (!room) return { error: "not_found" } as const;
+  if (room.status === "lobby") return { error: "already_lobby" } as const;
+  if (participantId !== room.hostId) return { error: "not_host" } as const;
+
+  room.status = "lobby";
+  room.word = undefined;
+  room.drawerParticipantId = undefined;
+  room.guesses = [];
+  room.strokes = [];
+  room.participants.forEach((p) => { p.score = 0; });
+  room.updatedAt = now();
+  rooms.set(code, room);
+  return { room: cloneRoom(room) };
+}
+
+export function endRound(code: string, participantId: string) {
+  const room = rooms.get(code);
+  if (!room) return { error: "not_found" } as const;
+  if (room.status !== "in_game") return { error: "not_in_game" } as const;
+  if (participantId !== room.hostId) return { error: "not_host" } as const;
+
+  room.status = "result";
+  room.updatedAt = now();
+  rooms.set(code, room);
+  return { room: cloneRoom(room) };
+}
+
+export function restartGame(code: string, participantId: string) {
+  const room = rooms.get(code);
+  if (!room) return { error: "not_found" } as const;
+  if (room.status !== "result") return { error: "not_in_result" } as const;
+  if (participantId !== room.hostId) return { error: "not_host" } as const;
+
+  room.status = "lobby";
+  room.word = undefined;
+  room.drawerParticipantId = undefined;
+  room.guesses = [];
+  room.strokes = [];
+  room.participants.forEach((p) => { p.score = 0; });
+  room.updatedAt = now();
+  rooms.set(code, room);
+  return { room: cloneRoom(room) };
+}
+
 export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSnapshot {
   const isDrawer =
     room.status === "in_game" &&
     viewerParticipantId !== undefined &&
     viewerParticipantId === room.drawerParticipantId;
+
+  // Word visible to all in result state; only to drawer in in_game
+  const showWord = room.status === "result" || isDrawer;
 
   return {
     code: room.code,
@@ -185,8 +234,8 @@ export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSn
     availableWords: listWords(),
     roles: [...STARTER_ROLES],
     isHost: viewerParticipantId === room.hostId,
-    ...(room.status === "in_game" && { drawerParticipantId: room.drawerParticipantId }),
-    ...(isDrawer && { word: room.word }),
+    ...(room.status !== "lobby" && { drawerParticipantId: room.drawerParticipantId }),
+    ...(showWord && { word: room.word }),
     guesses: room.guesses.map((g) => ({ ...g })),
     strokes: room.strokes.map((s) => ({ ...s, points: s.points.map((p) => ({ ...p })) }))
   };

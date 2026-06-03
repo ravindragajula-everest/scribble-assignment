@@ -106,6 +106,43 @@ Content-Type: application/json
 { "message": "Only the host can restart the game" }
 ```
 
+---
+
+## NEW: POST /api/rooms/:code/exit — Exit Game (Host Reset)
+
+**Host exits the game from any active status (in_game or result), resetting the room to lobby.**
+
+### Request
+
+```
+POST /api/rooms/ABCD/exit
+Content-Type: application/json
+
+{ "participantId": "550e8400-..." }
+```
+
+### Responses
+
+**200 OK** — room reset to lobby:
+```json
+{ "room": { "code": "ABCD", "status": "lobby", "participants": [...], "guesses": [], "strokes": [] } }
+```
+
+**403 Forbidden** — caller is not the host:
+```json
+{ "message": "Only the host can exit the game" }
+```
+
+**404 Not Found** — room not found:
+```json
+{ "message": "Room not found" }
+```
+
+**409 Conflict** — room is already in lobby:
+```json
+{ "message": "Room is already in lobby" }
+```
+
 **404 Not Found** — room not found:
 ```json
 { "message": "Room not found" }

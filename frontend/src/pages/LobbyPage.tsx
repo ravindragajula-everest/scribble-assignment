@@ -15,7 +15,7 @@ export function LobbyPage() {
   useEffect(() => {
     if (!room) {
       navigate("/", { replace: true });
-    } else if (room.status === "in_game") {
+    } else if (room.status === "in_game" || room.status === "result") {
       navigate("/game", { replace: true });
     }
   }, [navigate, room]);

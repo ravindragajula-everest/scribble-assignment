@@ -3,14 +3,17 @@ import {
   addStrokeSchema,
   clearStrokesSchema,
   createRoomSchema,
+  endRoundSchema,
+  exitRoundSchema,
   HttpError,
   joinRoomSchema,
+  restartGameSchema,
   roomCodeParamsSchema,
   roomViewerQuerySchema,
   startGameSchema,
   submitGuessSchema
 } from "./schemas.js";
-import { addStroke, clearStrokes, createRoom, getRoom, joinRoom, startGame, submitGuess, toRoomSnapshot } from "../services/roomStore.js";
+import { addStroke, clearStrokes, createRoom, endRound, exitRound, getRoom, joinRoom, restartGame, startGame, submitGuess, toRoomSnapshot } from "../services/roomStore.js";
 
 export function createRoomsRouter() {
   const router = Router();
@@ -117,6 +120,60 @@ export function createRoomsRouter() {
         if (result.error === "not_found") throw new HttpError(404, "Room not found");
         if (result.error === "not_in_game") throw new HttpError(409, "Game is not in progress");
         throw new HttpError(403, "Only the drawer can clear the canvas");
+      }
+
+      response.json({ room: toRoomSnapshot(result.room, participantId) });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:code/exit", (request, response, next) => {
+    try {
+      const { code } = roomCodeParamsSchema.parse(request.params);
+      const { participantId } = exitRoundSchema.parse(request.body);
+      const result = exitRound(code.toUpperCase(), participantId);
+
+      if ("error" in result) {
+        if (result.error === "not_found") throw new HttpError(404, "Room not found");
+        if (result.error === "already_lobby") throw new HttpError(409, "Room is already in lobby");
+        throw new HttpError(403, "Only the host can exit the game");
+      }
+
+      response.json({ room: toRoomSnapshot(result.room, participantId) });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:code/end", (request, response, next) => {
+    try {
+      const { code } = roomCodeParamsSchema.parse(request.params);
+      const { participantId } = endRoundSchema.parse(request.body);
+      const result = endRound(code.toUpperCase(), participantId);
+
+      if ("error" in result) {
+        if (result.error === "not_found") throw new HttpError(404, "Room not found");
+        if (result.error === "not_in_game") throw new HttpError(409, "Game is not in progress");
+        throw new HttpError(403, "Only the host can end the round");
+      }
+
+      response.json({ room: toRoomSnapshot(result.room, participantId) });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:code/restart", (request, response, next) => {
+    try {
+      const { code } = roomCodeParamsSchema.parse(request.params);
+      const { participantId } = restartGameSchema.parse(request.body);
+      const result = restartGame(code.toUpperCase(), participantId);
+
+      if ("error" in result) {
+        if (result.error === "not_found") throw new HttpError(404, "Room not found");
+        if (result.error === "not_in_result") throw new HttpError(409, "Round has not ended yet");
+        throw new HttpError(403, "Only the host can restart the game");
       }
 
       response.json({ room: toRoomSnapshot(result.room, participantId) });

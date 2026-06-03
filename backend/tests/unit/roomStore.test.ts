@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { addStroke, clearStrokes, createRoom, joinRoom, startGame, submitGuess, toRoomSnapshot } from "../../src/services/roomStore.js";
+import { addStroke, clearStrokes, createRoom, endRound, exitRound, joinRoom, restartGame, startGame, submitGuess, toRoomSnapshot } from "../../src/services/roomStore.js";
 
 describe("createRoom", () => {
   it("assigns hostId equal to the first participant's id", () => {
@@ -183,5 +183,107 @@ describe("clearStrokes", () => {
     const joiner = joinRoom(room.code, "Bob")!; // eslint-disable-line @typescript-eslint/no-non-null-assertion
     startGame(room.code, hostId);
     expect(clearStrokes(room.code, joiner.participantId)).toEqual({ error: "not_drawer" });
+  });
+});
+
+describe("endRound", () => {
+  it("transitions in_game → result for host", () => {
+    const { room, participantId: hostId } = createRoom("Alice");
+    joinRoom(room.code, "Bob");
+    startGame(room.code, hostId);
+    const result = endRound(room.code, hostId);
+    expect(result).toMatchObject({ room: { status: "result" } });
+  });
+
+  it("returns not_host error for non-host", () => {
+    const { room, participantId: hostId } = createRoom("Alice");
+    const joiner = joinRoom(room.code, "Bob")!; // eslint-disable-line @typescript-eslint/no-non-null-assertion
+    startGame(room.code, hostId);
+    expect(endRound(room.code, joiner.participantId)).toEqual({ error: "not_host" });
+  });
+
+  it("returns not_in_game error when not in_game status", () => {
+    const { room, participantId: hostId } = createRoom("Alice");
+    expect(endRound(room.code, hostId)).toEqual({ error: "not_in_game" });
+  });
+
+  it("toRoomSnapshot in result status includes word for non-host viewer", () => {
+    const { room, participantId: hostId } = createRoom("Alice");
+    const joiner = joinRoom(room.code, "Bob")!; // eslint-disable-line @typescript-eslint/no-non-null-assertion
+    startGame(room.code, hostId);
+    const ended = endRound(room.code, hostId);
+    if (!("room" in ended)) throw new Error("endRound failed");
+    const snap = toRoomSnapshot(ended.room, joiner.participantId);
+    expect(snap.word).toBe("rocket");
+    expect(snap.status).toBe("result");
+  });
+});
+
+describe("restartGame", () => {
+  it("transitions result → lobby and clears all round state for host", () => {
+    const { room, participantId: hostId } = createRoom("Alice");
+    const joiner = joinRoom(room.code, "Bob")!; // eslint-disable-line @typescript-eslint/no-non-null-assertion
+    startGame(room.code, hostId);
+    submitGuess(room.code, joiner.participantId, "rocket");
+    endRound(room.code, hostId);
+    const result = restartGame(room.code, hostId);
+    expect(result).toMatchObject({
+      room: {
+        status: "lobby",
+        guesses: [],
+        strokes: []
+      }
+    });
+    if (!("room" in result)) throw new Error("restartGame failed");
+    expect(result.room.participants.every((p) => p.score === 0)).toBe(true);
+  });
+
+  it("returns not_host error for non-host", () => {
+    const { room, participantId: hostId } = createRoom("Alice");
+    const joiner = joinRoom(room.code, "Bob")!; // eslint-disable-line @typescript-eslint/no-non-null-assertion
+    startGame(room.code, hostId);
+    endRound(room.code, hostId);
+    expect(restartGame(room.code, joiner.participantId)).toEqual({ error: "not_host" });
+  });
+
+  it("returns not_in_result error when not in result status", () => {
+    const { room, participantId: hostId } = createRoom("Alice");
+    joinRoom(room.code, "Bob");
+    startGame(room.code, hostId);
+    expect(restartGame(room.code, hostId)).toEqual({ error: "not_in_result" });
+  });
+});
+
+describe("exitRound", () => {
+  it("resets to lobby from in_game for host", () => {
+    const { room, participantId: hostId } = createRoom("Alice");
+    const joiner = joinRoom(room.code, "Bob")!; // eslint-disable-line @typescript-eslint/no-non-null-assertion
+    startGame(room.code, hostId);
+    submitGuess(room.code, joiner.participantId, "rocket");
+    const result = exitRound(room.code, hostId);
+    expect(result).toMatchObject({ room: { status: "lobby", guesses: [], strokes: [] } });
+    if (!("room" in result)) throw new Error("exitRound failed");
+    expect(result.room.participants.every((p) => p.score === 0)).toBe(true);
+  });
+
+  it("resets to lobby from result for host", () => {
+    const { room, participantId: hostId } = createRoom("Alice");
+    joinRoom(room.code, "Bob");
+    startGame(room.code, hostId);
+    endRound(room.code, hostId);
+    const result = exitRound(room.code, hostId);
+    expect(result).toMatchObject({ room: { status: "lobby" } });
+  });
+
+  it("returns already_lobby when room is already in lobby", () => {
+    const { room, participantId: hostId } = createRoom("Alice");
+    expect(exitRound(room.code, hostId)).toEqual({ error: "already_lobby" });
+  });
+
+  it("returns not_host for non-host", () => {
+    const { room, participantId: hostId } = createRoom("Alice");
+    const joiner = joinRoom(room.code, "Bob")!; // eslint-disable-line @typescript-eslint/no-non-null-assertion
+    startGame(room.code, hostId);
+    expect(exitRound(room.code, joiner.participantId)).toEqual({ error: "not_host" });
   });
 });

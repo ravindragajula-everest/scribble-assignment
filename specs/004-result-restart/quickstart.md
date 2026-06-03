@@ -17,13 +17,20 @@ cd frontend && npm run dev   # localhost:5173
 3. Tab A: Click "Start Game" → Game screen
 4. Tab B (Bob): Guess "rocket" → score shows 100
 
+## Step 1b — Verify Deferred Reveal During Gameplay
+
+1. Tab B (Bob): Submit a guess "pizza" → guess appears in Activity as "Bob: pizza" WITHOUT ✓/✗
+2. Tab A (Alice — host): Activity also shows "Bob: pizza" WITHOUT ✓/✗ via polling
+3. Scoreboard on BOTH tabs shows "—" for all scores (not 0 and not 100)
+4. Alice's scoreboard shows "—" for Alice and Bob
+
 ## Step 2 — End the Round
 
 1. Tab A (Alice — host): Confirm "End Round" button is visible
 2. Tab B (Bob): Confirm "End Round" button is NOT visible
 3. Tab A: Click "End Round"
-4. **Expected (Tab A)**: Result view appears immediately showing "rocket", Alice's score, Bob's score (100), and all guesses
-5. **Expected (Tab B)**: Within 2 seconds, result view appears showing "rocket" to Bob (who couldn't see it during gameplay), plus all scores and guesses
+4. **Expected (Tab A)**: ✓/✗ indicators NOW appear on all guesses in Activity; Scoreboard reveals actual scores (Alice: 0, Bob: 0 since "pizza" was incorrect); word "rocket" appears in the game layout
+5. **Expected (Tab B)**: Within 2 seconds, same reveal happens: ✓/✗ visible, scores visible, "rocket" visible — without any modal or separate screen
 
 ## Step 3 — Verify Result Content
 
